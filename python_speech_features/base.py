@@ -168,6 +168,27 @@ def get_filterbanks(nfilt=20,nfft=512,samplerate=16000,lowfreq=0,highfreq=None):
     #  from Hz to fft bin number
     bin = numpy.floor((nfft+1)*mel2hz(melpoints)/samplerate)
 
+    # fix for high values of nfilt, e.g. NVIDIAs OpenSeq2Seq
+    # Wave2Letter+ uses nfilt=64 which made the mapping
+    # non-monotone (due to rounding errors). This somewhat ugly sanity
+    # scan produces more correct filter widths  
+    ii = 1
+    xtra = 0
+    old_diff = 0
+    while ii < len(bin) :
+        diff = bin[ii] - bin[ii-1]
+        while diff < old_diff  or diff < 1:
+            bin[ii] = bin[ii] + 1.0
+            xtra = xtra + 1
+            diff = diff + 1
+        if diff > old_diff and diff > 1 and xtra > 0 :
+            bin[ii] = bin[ii] - 1.0 # should be enough to adjust with one
+            xtra = xtra - 1
+            diff = diff - 1
+        ii = ii + 1  
+        old_diff = diff
+    # end of fix
+    
     fbank = numpy.zeros([nfilt,nfft//2+1])
     for j in range(0,nfilt):
         for i in range(int(bin[j]), int(bin[j+1])):
