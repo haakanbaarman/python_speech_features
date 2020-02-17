@@ -145,7 +145,6 @@ def mel2hz(mel):
     :returns: a value in Hertz. If an array was passed in, an identical sized array is returned.
     """
     return 700*(10**(mel/2595.0)-1)
-
 def get_filterbanks(nfilt=20,nfft=512,samplerate=16000,lowfreq=0,highfreq=None):
     """Compute a Mel-filterbank. The filters are stored in the rows, the columns correspond
     to fft bins. The filters are returned as an array of size nfilt * (nfft/2 + 1)
@@ -175,9 +174,10 @@ def get_filterbanks(nfilt=20,nfft=512,samplerate=16000,lowfreq=0,highfreq=None):
     ii = 1
     xtra = 0
     old_diff = 0
+    max_value = nfft//2 # ensure that the sanity check don't move stuff outside of available data
     while ii < len(bin) :
         diff = bin[ii] - bin[ii-1]
-        while diff < old_diff  or diff < 1:
+        while diff < old_diff  or diff < 1: # minimum width of filter is one fft data point
             bin[ii] = bin[ii] + 1.0
             xtra = xtra + 1
             diff = diff + 1
@@ -185,6 +185,8 @@ def get_filterbanks(nfilt=20,nfft=512,samplerate=16000,lowfreq=0,highfreq=None):
             bin[ii] = bin[ii] - 1.0 # should be enough to adjust with one
             xtra = xtra - 1
             diff = diff - 1
+        if bin[ii] > max_value : # yet another sanity check, if there are more filters than fft spots
+            bin[ii] = max_value
         ii = ii + 1  
         old_diff = diff
     # end of fix
